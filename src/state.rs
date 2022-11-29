@@ -8,7 +8,7 @@ pub static CONFIG_KEY: &[u8] = b"config";
 
 pub const PREFIX_PERMITS: &str = "revoke";
 pub const SUFFIX_ED_KEY: &str = "edkk";
-pub const SUFFIX_IP_KEY: &str = "ipkk";
+pub const SUFFIX_IP_KEY: &str = "edkk"; //todo:change to ip's key
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct State {
     pub ed_nft_contract: CanonicalAddr,

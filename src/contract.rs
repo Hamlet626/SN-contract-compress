@@ -13,7 +13,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
     set_viewing_key_msg(msg.view_key.clone().add(SUFFIX_IP_KEY), None, 0,
-                        msg.ed_code_hash.to_owned(), msg.ed_ctr.to_owned())?;
+                        msg.ip_code_hash.to_owned(), msg.ip_ctr.to_owned())?;
     set_viewing_key_msg(msg.view_key.clone().add(SUFFIX_ED_KEY), None, 0,
                         msg.ed_code_hash.to_owned(), msg.ed_ctr.to_owned())?;
     register_receive_nft_msg(env.contract_code_hash, None, None,
