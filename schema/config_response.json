@@ -1,24 +1,28 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "InitMsg",
+  "title": "ConfigResponse",
   "type": "object",
   "required": [
     "ed_code_hash",
-    "ed_ctr",
+    "ed_nft_contract",
     "ip_code_hash",
-    "ip_ctr"
+    "ip_nft_contract",
+    "owner"
   ],
   "properties": {
     "ed_code_hash": {
       "type": "string"
     },
-    "ed_ctr": {
+    "ed_nft_contract": {
       "$ref": "#/definitions/HumanAddr"
     },
     "ip_code_hash": {
       "type": "string"
     },
-    "ip_ctr": {
+    "ip_nft_contract": {
+      "$ref": "#/definitions/HumanAddr"
+    },
+    "owner": {
       "$ref": "#/definitions/HumanAddr"
     }
   },

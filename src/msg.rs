@@ -10,6 +10,7 @@ pub struct InitMsg {
     pub ed_code_hash: String,
     pub ip_ctr: HumanAddr,
     pub ip_code_hash: String,
+    pub view_key:String
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -28,7 +29,7 @@ pub enum HandleMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     // GetCount returns the current count as a json-encoded number
-    GetConfig {},
+    GetConfig {permit:Option<Permit>},
     ViewNft {
         token_id: String,
         permit:Option<Permit>}
@@ -42,6 +43,7 @@ pub struct ConfigResponse {
     pub ip_nft_contract: HumanAddr,
     pub ip_code_hash: String,
     pub owner: HumanAddr,
+    pub view_key: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

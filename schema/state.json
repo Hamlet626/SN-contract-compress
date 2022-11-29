@@ -3,13 +3,28 @@
   "title": "State",
   "type": "object",
   "required": [
-    "count",
+    "contract_addr",
+    "ed_code_hash",
+    "ed_nft_contract",
+    "ip_code_hash",
+    "ip_nft_contract",
     "owner"
   ],
   "properties": {
-    "count": {
-      "type": "integer",
-      "format": "int32"
+    "contract_addr": {
+      "$ref": "#/definitions/HumanAddr"
+    },
+    "ed_code_hash": {
+      "type": "string"
+    },
+    "ed_nft_contract": {
+      "$ref": "#/definitions/CanonicalAddr"
+    },
+    "ip_code_hash": {
+      "type": "string"
+    },
+    "ip_nft_contract": {
+      "$ref": "#/definitions/CanonicalAddr"
     },
     "owner": {
       "$ref": "#/definitions/CanonicalAddr"
@@ -22,6 +37,9 @@
     },
     "CanonicalAddr": {
       "$ref": "#/definitions/Binary"
+    },
+    "HumanAddr": {
+      "type": "string"
     }
   }
 }
