@@ -141,7 +141,7 @@ fn check_view_nft<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>,tokenid
                                  |tr| tr.trait_type.is_some()&&"agc"==tr.trait_type.as_ref().unwrap());
         let ed_agc =&ed_traits.unwrap().value;
 
-        let ip_contr_addr =&deps.api.human_address(&state.ip_nft_contract)?;
+        // let ip_contr_addr =&deps.api.human_address(&state.ip_nft_contract)?;
 
         // let view=ipnfts.tokens.iter().find(|&ipnft|{
         //     let detail=nft_dossier_query(&deps.querier, String::from(ipnft), ip_viewer.to_owned(),
