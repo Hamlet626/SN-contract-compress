@@ -128,34 +128,35 @@ fn check_view_nft<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>,tokenid
                                  deps.api.human_address(&state.ed_nft_contract)?)?;
 
     if permit.is_some() {
-        // let sender=HumanAddr(validate(deps, PREFIX_PERMITS, &permit.unwrap(), state.contract_addr.to_owned(), None)?);
-        // let ip_viewer =Some(ViewerInfo{ address: state.contract_addr.to_owned(),
-        //     viewing_key: vkey.clone().add(SUFFIX_IP_KEY) });
-        // let ipnfts=tokens_query(&deps.querier, sender, Some(state.contract_addr.clone()),
-        //                        Some(ip_viewer.to_owned().unwrap().viewing_key),
-        //                         None, Option::Some(100),256,
-        //                        state.ip_code_hash.to_owned(),
-        //                        deps.api.human_address(&state.ip_nft_contract)?)?;
-        //
-        // let ed_traits = find_trait(ednft.to_owned().public_metadata).unwrap_or_else(||vec![].into_iter()).find(
-        //                          |tr| tr.trait_type.is_some()&&"agc"==tr.trait_type.as_ref().unwrap());
-        // let ed_agc =&ed_traits.unwrap().value;
+        let sender=HumanAddr(validate(deps, PREFIX_PERMITS, &permit.unwrap(), state.contract_addr.to_owned(), None)?);
+        let ip_viewer =Some(ViewerInfo{ address: state.contract_addr.to_owned(),
+            viewing_key: vkey.clone().add(SUFFIX_IP_KEY) });
+        let ipnfts=tokens_query(&deps.querier, sender, Some(state.contract_addr.clone()),
+                               Some(ip_viewer.to_owned().unwrap().viewing_key),
+                                None, Option::Some(100),256,
+                               state.ip_code_hash.to_owned(),
+                               deps.api.human_address(&state.ip_nft_contract)?)?;
 
-        // let ip_contr_addr =&deps.api.human_address(&state.ip_nft_contract)?;
+        let ed_traits = find_trait(ednft.to_owned().public_metadata).unwrap_or_else(||vec![].into_iter()).find(
+                                 |tr| tr.trait_type.is_some()&&"agc"==tr.trait_type.as_ref().unwrap());
 
-        // let view=ipnfts.tokens.iter().find(|&ipnft|{
-        //     let detail=nft_dossier_query(&deps.querier, String::from(ipnft), ip_viewer.to_owned(),
-        //                                  Option::Some(true), 256,
-        //                                  state.ip_code_hash.to_owned(),
-        //                                  ip_contr_addr.to_owned());
-        //
-        //     if detail.is_err(){false}
-        //     else{
-        //         let data=detail.unwrap().public_metadata;
-        //         find_trait(data).unwrap_or_else(||vec![].into_iter()).find(
-        //             |t| t.trait_type.is_some()&&t.trait_type.as_ref().unwrap()==ed_agc).is_some()
-        //     }
-        // }).is_some();
+        let ed_agc =&String::from("test");//&ed_traits.unwrap().value;
+
+        let ip_contr_addr =&deps.api.human_address(&state.ip_nft_contract)?;
+
+        let view=ipnfts.tokens.iter().find(|&ipnft|{
+            let detail=nft_dossier_query(&deps.querier, String::from(ipnft), ip_viewer.to_owned(),
+                                         Option::Some(true), 256,
+                                         state.ip_code_hash.to_owned(),
+                                         ip_contr_addr.to_owned());
+
+            if detail.is_err(){false}
+            else{
+                let data=detail.unwrap().public_metadata;
+                find_trait(data).unwrap_or_else(||vec![].into_iter()).find(
+                    |t| t.trait_type.is_some()&&t.trait_type.as_ref().unwrap()==ed_agc).is_some()
+            }
+        }).is_some();
 
     }
 
