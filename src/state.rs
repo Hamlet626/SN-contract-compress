@@ -16,7 +16,7 @@ pub struct State {
     pub ip_nft_contract: CanonicalAddr,
     pub ip_code_hash: String,
     pub contract_addr: HumanAddr,
-    pub viewing_key: String,
+    pub viewing_key: Option<String>,
     pub owner: CanonicalAddr,
 }
 

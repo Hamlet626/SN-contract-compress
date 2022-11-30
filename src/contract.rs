@@ -3,6 +3,7 @@ use std::vec::IntoIter;
 use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, HumanAddr};
 use secret_toolkit::permit::{Permit, validate};
 use secret_toolkit::snip721::{AccessLevel, Metadata, nft_dossier_query, NftDossier, register_receive_nft_msg, set_viewing_key_msg, set_whitelisted_approval_msg, tokens_query, Trait, ViewerInfo};
+use snafu::{Backtrace, GenerateBacktrace};
 
 use crate::msg::{ConfigResponse, HandleMsg, InitMsg, QueryMsg};
 use crate::state::{config, config_read, PREFIX_PERMITS, State, SUFFIX_ED_KEY, SUFFIX_IP_KEY};
@@ -12,13 +13,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-    set_viewing_key_msg(msg.view_key.clone().add(SUFFIX_IP_KEY), None, 0,
-                        msg.ip_code_hash.to_owned(), msg.ip_ctr.to_owned())?;
-    set_viewing_key_msg(msg.view_key.clone().add(SUFFIX_ED_KEY), None, 0,
-                        msg.ed_code_hash.to_owned(), msg.ed_ctr.to_owned())?;
-    register_receive_nft_msg(env.contract_code_hash, None, None,
-                             0, msg.ed_code_hash.to_owned() , msg.ed_ctr.to_owned())?;
-
     let state = State {
         ed_nft_contract: deps.api.canonical_address(&msg.ed_ctr)?,
         ed_code_hash: msg.ed_code_hash,
@@ -26,7 +20,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         ip_code_hash: msg.ip_code_hash,
         owner: deps.api.canonical_address(&env.message.sender)?,
         contract_addr: env.contract.address.clone(),
-        viewing_key: msg.view_key
+        viewing_key: None
     };
 
 
@@ -45,7 +39,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     match msg {
         HandleMsg::ReceiveNft { sender,token_id,msg } =>
             set_sender_auth(deps, sender, token_id, msg),
-        HandleMsg::Increment {} => try_increment(deps, env),
+        HandleMsg::SetUp { view_key,permit } => set_up(deps, env,view_key,permit),
         HandleMsg::Reset { count } => try_reset(deps, env, count),
     }
 }
@@ -66,14 +60,25 @@ pub fn set_sender_auth<S: Storage, A: Api, Q: Querier>(
             data: None })
 }
 
-pub fn try_increment<S: Storage, A: Api, Q: Querier>(
+pub fn set_up<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    _env: Env,
+    env: Env,
+    vkey:String,
+    permit:Permit
 ) -> StdResult<HandleResponse> {
+    let sender=HumanAddr(validate(&deps, PREFIX_PERMITS, &permit, env.contract.address.clone(), None)?);
+    let api=&deps.api.clone();
     config(&mut deps.storage).update(|mut state| {
-        // state.count += 1;
-        // debug_print!("count = {}", state.count);
-        Ok(state)
+        if sender!=api.human_address(&state.owner)? { Err(StdError::Unauthorized { backtrace: Some(Backtrace::generate()) }) }
+        else {
+            set_viewing_key_msg(vkey.clone().add(SUFFIX_IP_KEY), None, 0,
+                                state.ip_code_hash.to_owned(), api.human_address(&state.ip_nft_contract)?)?;
+            set_viewing_key_msg(vkey.clone().add(SUFFIX_ED_KEY), None, 0,
+                                state.ed_code_hash.to_owned(), api.human_address(&state.ed_nft_contract)?)?;
+            register_receive_nft_msg(env.contract_code_hash, None, None,
+                                     0, state.ed_code_hash.to_owned(), api.human_address(&state.ed_nft_contract)?)?;
+            state.viewing_key=Some(vkey);
+            Ok(state) }
     })?;
 
     debug_print("count incremented successfully");
@@ -109,8 +114,9 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 
 fn check_view_nft<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>,tokenid:String,permit:Option<Permit>)->StdResult<NftDossier>{
     let state=&config_read(&deps.storage).load()?;
+    let vkey=state.viewing_key.clone().unwrap();
     let ed_viewer =Option::Some(ViewerInfo{ address: state.contract_addr.to_owned(),
-        viewing_key: state.viewing_key.clone().add(SUFFIX_ED_KEY) });
+        viewing_key: vkey.clone().add(SUFFIX_ED_KEY) });
     let ednft=&nft_dossier_query(&deps.querier, tokenid, ed_viewer,
                                  Option::Some(true), 0,
                                  state.ed_code_hash.to_owned(),
@@ -119,7 +125,7 @@ fn check_view_nft<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>,tokenid
     if permit.is_some() {
         let sender=HumanAddr(validate(deps, PREFIX_PERMITS, &permit.unwrap(), state.contract_addr.to_owned(), None)?);
         let ip_viewer =Option::Some(ViewerInfo{ address: state.contract_addr.to_owned(),
-            viewing_key: state.viewing_key.clone().add(SUFFIX_IP_KEY) });
+            viewing_key: vkey.clone().add(SUFFIX_IP_KEY) });
         let ipnfts=tokens_query(&deps.querier, sender, None,
                                Option::Some(ip_viewer.to_owned().unwrap().viewing_key),
                                 None, Option::Some(100),0,
@@ -180,7 +186,7 @@ fn query_config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>,permit:Op
     };
     if permit.is_some() {
         let sender=HumanAddr(validate(deps, PREFIX_PERMITS, &permit.unwrap(), state.contract_addr.to_owned(), None)?);
-        if sender==r.owner { r.view_key= Option::Some(state.viewing_key); }
+        if sender==r.owner { r.view_key= state.viewing_key; }
     }
     Ok(r)
 }
@@ -204,7 +210,6 @@ mod tests {
             ed_code_hash: String::from(ipCHash),
             ip_ctr: HumanAddr(String::from(ipCAddr)),
             ip_code_hash: String::from(ipCHash),
-            view_key: "xxxvk".to_string()
         };
         let env = mock_env("creator", &coins(1000, "earth"));
 
@@ -231,7 +236,6 @@ mod tests {
             ed_code_hash: String::from(ipCHash),
             ip_ctr: HumanAddr(String::from(ipCAddr)),
             ip_code_hash: String::from(ipCHash),
-            view_key: "xxxvk".to_string()
         };
         let env = mock_env("creator", &coins(1000, "token"));
         let _res = init(&mut deps, env, msg).unwrap();

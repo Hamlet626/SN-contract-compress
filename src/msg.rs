@@ -10,7 +10,6 @@ pub struct InitMsg {
     pub ed_code_hash: String,
     pub ip_ctr: HumanAddr,
     pub ip_code_hash: String,
-    pub view_key:String
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -21,7 +20,9 @@ pub enum HandleMsg {
         token_id: String,
         msg: Option<Binary>,
     },
-    Increment {},
+    SetUp {
+        view_key: String,
+        permit: Permit},
     Reset { count: i32 },
 }
 
