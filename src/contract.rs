@@ -128,18 +128,18 @@ fn check_view_nft<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>,tokenid
                                  deps.api.human_address(&state.ed_nft_contract)?)?;
 
     if permit.is_some() {
-        let sender=HumanAddr(validate(deps, PREFIX_PERMITS, &permit.unwrap(), state.contract_addr.to_owned(), None)?);
-        let ip_viewer =Some(ViewerInfo{ address: state.contract_addr.to_owned(),
-            viewing_key: vkey.clone().add(SUFFIX_IP_KEY) });
-        let ipnfts=tokens_query(&deps.querier, sender, Some(state.contract_addr.clone()),
-                               Some(ip_viewer.to_owned().unwrap().viewing_key),
-                                None, Option::Some(100),256,
-                               state.ip_code_hash.to_owned(),
-                               deps.api.human_address(&state.ip_nft_contract)?)?;
-
-        let ed_traits = find_trait(ednft.to_owned().public_metadata).unwrap_or_else(||vec![].into_iter()).find(
-                                 |tr| tr.trait_type.is_some()&&"agc"==tr.trait_type.as_ref().unwrap());
-        let ed_agc =&ed_traits.unwrap().value;
+        // let sender=HumanAddr(validate(deps, PREFIX_PERMITS, &permit.unwrap(), state.contract_addr.to_owned(), None)?);
+        // let ip_viewer =Some(ViewerInfo{ address: state.contract_addr.to_owned(),
+        //     viewing_key: vkey.clone().add(SUFFIX_IP_KEY) });
+        // let ipnfts=tokens_query(&deps.querier, sender, Some(state.contract_addr.clone()),
+        //                        Some(ip_viewer.to_owned().unwrap().viewing_key),
+        //                         None, Option::Some(100),256,
+        //                        state.ip_code_hash.to_owned(),
+        //                        deps.api.human_address(&state.ip_nft_contract)?)?;
+        //
+        // let ed_traits = find_trait(ednft.to_owned().public_metadata).unwrap_or_else(||vec![].into_iter()).find(
+        //                          |tr| tr.trait_type.is_some()&&"agc"==tr.trait_type.as_ref().unwrap());
+        // let ed_agc =&ed_traits.unwrap().value;
 
         // let ip_contr_addr =&deps.api.human_address(&state.ip_nft_contract)?;
 
@@ -160,8 +160,8 @@ fn check_view_nft<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>,tokenid
     }
 
     //todo:verify by view
-    let r=ednft.to_owned();
-    Ok(r)
+    // let r=ednft.to_owned();
+    Ok(ednft.to_owned())
 }
 
 fn find_trait(metadata:Option<Metadata>) ->Option<IntoIter<Trait>>{
