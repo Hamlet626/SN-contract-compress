@@ -148,12 +148,13 @@ fn check_view_nft<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>,tokenid
                                          Option::Some(true), 256,
                                          state.ip_code_hash.to_owned(),
                                          ip_contr_addr.to_owned());
-            if detail.is_err(){false}
-            else{
-                let data=detail.unwrap().public_metadata;
-                find_trait(data).unwrap_or_else(||vec![].into_iter()).find(
-                    |t| t.trait_type.is_some()&&t.trait_type.as_ref().unwrap()==ed_agc).is_some()
-            }
+            false
+            // if detail.is_err(){false}
+            // else{
+            //     let data=detail.unwrap().public_metadata;
+            //     find_trait(data).unwrap_or_else(||vec![].into_iter()).find(
+            //         |t| t.trait_type.is_some()&&t.trait_type.as_ref().unwrap()==ed_agc).is_some()
+            // }
         }).is_some();
 
     }
