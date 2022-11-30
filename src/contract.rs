@@ -131,8 +131,8 @@ fn check_view_nft<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>,tokenid
         let sender=HumanAddr(validate(deps, PREFIX_PERMITS, &permit.unwrap(), state.contract_addr.to_owned(), None)?);
         let ip_viewer =Some(ViewerInfo{ address: state.contract_addr.to_owned(),
             viewing_key: vkey.clone().add(SUFFIX_IP_KEY) });
-        let ipnfts=tokens_query(&deps.querier, sender, None,
-                               Option::Some(ip_viewer.to_owned().unwrap().viewing_key),
+        let ipnfts=tokens_query(&deps.querier, sender, Some(state.contract_addr.clone()),
+                               Some(ip_viewer.to_owned().unwrap().viewing_key),
                                 None, Option::Some(100),256,
                                state.ip_code_hash.to_owned(),
                                deps.api.human_address(&state.ip_nft_contract)?)?;
@@ -141,38 +141,26 @@ fn check_view_nft<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>,tokenid
                                  |tr| tr.trait_type.is_some()&&"agc"==tr.trait_type.as_ref().unwrap());
         let ed_agc =&ed_traits.unwrap().value;
 
-        //
-        // let ip_contr_addr =&deps.api.human_address(&state.ip_nft_contract)?;
-        //
-        // let view=ipnfts.tokens.iter().find(|&ipnft|{
-        //     let detail=nft_dossier_query(&deps.querier, String::from(ipnft), ip_viewer.to_owned(),
-        //                                  Option::Some(true), 0,
-        //                                  state.ip_code_hash.to_owned(),
-        //                                  ip_contr_addr.to_owned());
-        //     if detail.is_err(){false}
-        //     else{
-        //         let data=detail.unwrap().public_metadata;
-        //         find_trait(data).unwrap_or_else(||vec![].into_iter()).find(
-        //             |t| t.trait_type.is_some()&&t.trait_type.as_ref().unwrap()==ed_agc).is_some()
-        //     }
-        // }).is_some();
+        let ip_contr_addr =&deps.api.human_address(&state.ip_nft_contract)?;
+
+        let view=ipnfts.tokens.iter().find(|&ipnft|{
+            let detail=nft_dossier_query(&deps.querier, String::from(ipnft), ip_viewer.to_owned(),
+                                         Option::Some(true), 256,
+                                         state.ip_code_hash.to_owned(),
+                                         ip_contr_addr.to_owned());
+            if detail.is_err(){false}
+            else{
+                let data=detail.unwrap().public_metadata;
+                find_trait(data).unwrap_or_else(||vec![].into_iter()).find(
+                    |t| t.trait_type.is_some()&&t.trait_type.as_ref().unwrap()==ed_agc).is_some()
+            }
+        }).is_some();
+
     }
 
     //todo:verify by view
-    Ok(ednft.to_owned()
-       //     NftDossier {
-       //     owner: None,
-       //     public_metadata: None,
-       //     private_metadata: None,
-       //     display_private_metadata_error: None,
-       //     owner_is_public: false,
-       //     public_ownership_expiration: None,
-       //     private_metadata_is_public: false,
-       //     private_metadata_is_public_expiration: None,
-       //     token_approvals: None,
-       //     inventory_approvals: None
-       // }
-    )
+    let r=ednft.to_owned();
+    Ok(r)
 }
 
 fn find_trait(metadata:Option<Metadata>) ->Option<IntoIter<Trait>>{
