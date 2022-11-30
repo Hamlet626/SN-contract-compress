@@ -140,6 +140,8 @@ fn check_view_nft<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>,tokenid
         let ed_traits = find_trait(ednft.to_owned().public_metadata).unwrap_or_else(||vec![].into_iter()).find(
                                  |tr| tr.trait_type.is_some()&&"agc"==tr.trait_type.as_ref().unwrap());
 
+        //todo:uncomment unwrap().. below,
+        // currently will panic since ipNft haven't standard "agc" trait, later should have
         let ed_agc =&String::from("test");//&ed_traits.unwrap().value;
 
         let ip_contr_addr =&deps.api.human_address(&state.ip_nft_contract)?;
