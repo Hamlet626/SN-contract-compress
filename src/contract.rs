@@ -23,12 +23,13 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         viewing_key: msg.view_key
     };
 
-    let res_msg=vec![set_viewing_key_msg(state.viewing_key.clone().add(SUFFIX_IP_KEY), None, 256,
-                                         state.ip_code_hash.to_owned(), deps.api.human_address(&state.ip_nft_contract)?)?,
-                 set_viewing_key_msg(state.viewing_key.clone().add(SUFFIX_ED_KEY), None, 256,
-                                     state.ed_code_hash.to_owned(), deps.api.human_address(&state.ed_nft_contract)?)?,
-                 register_receive_nft_msg(env.contract_code_hash, None, None,
-                                          256, state.ed_code_hash.to_owned(), deps.api.human_address(&state.ed_nft_contract)?)?];
+    let res_msg=vec![
+        set_viewing_key_msg(state.viewing_key.clone().add(SUFFIX_IP_KEY), None, 256,
+                            state.ip_code_hash.to_owned(), deps.api.human_address(&state.ip_nft_contract)?)?,
+        set_viewing_key_msg(state.viewing_key.clone().add(SUFFIX_ED_KEY), None, 256,
+                            state.ed_code_hash.to_owned(), deps.api.human_address(&state.ed_nft_contract)?)?,
+        register_receive_nft_msg(env.contract_code_hash, None, None,
+                                 256, state.ed_code_hash.to_owned(), deps.api.human_address(&state.ed_nft_contract)?)?];
 
 
     config(&mut deps.storage).save(&state)?;
@@ -63,7 +64,7 @@ pub fn set_sender_auth<S: Storage, A: Api, Q: Querier>(
                                             config.ed_code_hash, deps.api.human_address(&config.ed_nft_contract)?)?];
     if info.is_ok() {
         store(&mut deps.storage).set(token_id.as_bytes(),msg.unwrap().as_slice());
-    }else {  }
+    }
 
     Ok(HandleResponse{
         messages: r,
