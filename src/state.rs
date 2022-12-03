@@ -28,6 +28,12 @@ pub struct StoreNftInfo {
     pub price: u128,
 }
 
+// impl StoreNftInfo {
+//     pub fn from(t:&[u8])->StoreNftInfo{
+//         let js=serde::Deserialize::
+//     }
+// }
+
 pub fn config<S: Storage>(storage: &mut S) -> Singleton<S, State> {
     singleton(storage, CONFIG_KEY)
 }

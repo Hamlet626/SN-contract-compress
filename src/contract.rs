@@ -237,6 +237,7 @@ mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env};
     use cosmwasm_std::{coins, from_binary, StdError};
+    use schemars::_serde_json::{json, Value};
     use secret_toolkit::permit::{PermitParams, PermitSignature, PubKey, SignedPermit, TokenPermissions};
 
     static ipCAddr: &str ="secret";
@@ -269,6 +270,17 @@ mod tests {
         assert_eq!(ipCHash, value.ed_code_hash);
     }
 
+    #[test]
+    fn json_test(){
+        let t=r#"{"owner":"secret19kl6c3lml882eyzagf6z0sh7pvsj8tndcfus3k","price":1000}"#;
+        let j1:StdResult<StoreNftInfo>=Json::deserialize(t.as_bytes());
+        let j2=json!(t);
+        println!("{}",j1.is_ok());
+        println!("{}",j2);
+        println!("{}",j2.is_string());
+        let v=j2.get("owner");
+        println!("{}",v.unwrap_or(&Value::String("".parse().unwrap())));
+    }
     #[test]
     fn view() {
         let mut deps = mock_dependencies(20, &coins(2, "token"));
