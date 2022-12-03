@@ -53,5 +53,5 @@ pub struct ConfigResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct NftResponse {
     pub dossier: NftDossier,
-    pub store_info: String
+    pub store_info: StoreNftInfo
 }

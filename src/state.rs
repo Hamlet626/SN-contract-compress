@@ -1,8 +1,9 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Binary, CanonicalAddr, from_binary, HumanAddr, ReadonlyStorage, StdResult, Storage};
+use cosmwasm_std::{Binary, CanonicalAddr, from_binary, HumanAddr, ReadonlyStorage, StdError, StdResult, Storage};
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton, PrefixedStorage, ReadonlyPrefixedStorage};
+use secret_toolkit::serialization::{Json, Serde};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static STORE_KEY: &[u8] = b"store";
@@ -39,8 +40,10 @@ pub fn store<S: Storage>(storage: &mut S) -> PrefixedStorage<S> {
     PrefixedStorage::new(STORE_KEY, storage)
 }
 
-pub fn store_read<S: Storage>(storage: &S,tokenid:&String) -> Option<String> {
-    let d=ReadonlyPrefixedStorage::new(STORE_KEY, storage).get(tokenid.as_bytes()).unwrap_or_default();
-    let r=Binary::from(d).to_base64();
-    Some(r)
+pub fn store_read<S: Storage>(storage: &S,tokenid:&String) -> StdResult<StoreNftInfo> {
+    Json::deserialize(
+        &ReadonlyPrefixedStorage::new(STORE_KEY, storage)
+            .get(tokenid.as_bytes())
+            .ok_or_else(|| StdError::not_found(tokenid))?,
+    )
 }
