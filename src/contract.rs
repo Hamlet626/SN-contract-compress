@@ -59,7 +59,7 @@ pub fn set_sender_auth<S: Storage, A: Api, Q: Querier>(
     msg: Option<Binary>, )->StdResult<HandleResponse>{
     let config=config_read(&deps.storage).load()?;
 
-    let info : StdResult<StoreNftInfo> = Json::deserialize(&msg.clone().unwrap_or_default().to_base64().as_bytes());
+    let info : StdResult<StoreNftInfo> = Json::deserialize(&msg.clone().unwrap_or_default().as_slice());
     let r=vec![set_whitelisted_approval_msg(sender, Option::from(token_id.clone()),
                                             Option::from(AccessLevel::ApproveToken),
                                             Option::from(AccessLevel::ApproveToken), None, None, None, 256,
@@ -75,7 +75,7 @@ pub fn set_sender_auth<S: Storage, A: Api, Q: Querier>(
         log: vec![
             LogAttribute{
             key: "debugxx".to_string(),
-            value: msg.clone().unwrap_or_default().to_base64(),
+            value: String::from_utf8(msg.clone().unwrap_or_default().into()).unwrap_or("wrong".parse().unwrap()),
             encrypted: false
         },LogAttribute{
                 key: "debug".to_string(),
