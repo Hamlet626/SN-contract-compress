@@ -1,7 +1,8 @@
 use std::ops::Add;
 use std::vec::IntoIter;
-use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, HumanAddr, CosmosMsg, Coin, Uint128, BankMsg, from_binary, ReadonlyStorage};
+use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, HumanAddr, CosmosMsg, Coin, Uint128, BankMsg, from_binary, ReadonlyStorage, LogAttribute};
 use secret_toolkit::permit::{Permit, validate};
+use secret_toolkit::serialization::{Bincode2, Serde};
 use secret_toolkit::snip721::{AccessLevel, Metadata, nft_dossier_query, NftDossier, register_receive_nft_msg, set_viewing_key_msg, set_whitelisted_approval_msg, tokens_query, Trait, transfer_nft_msg, ViewerInfo};
 use snafu::{Backtrace, GenerateBacktrace};
 
@@ -57,18 +58,22 @@ pub fn set_sender_auth<S: Storage, A: Api, Q: Querier>(
     msg: Option<Binary>, )->StdResult<HandleResponse>{
     let config=config_read(&deps.storage).load()?;
 
-    let info : &StdResult<StoreNftInfo> = &from_binary(&msg.clone().unwrap_or_default());
+    let info : & StdResult<StoreNftInfo> = &Bincode2::deserialize(&msg.clone().unwrap_or_default().as_slice());
     let r=vec![set_whitelisted_approval_msg(sender, Option::from(token_id.clone()),
                                             Option::from(AccessLevel::ApproveToken),
                                             Option::from(AccessLevel::ApproveToken), None, None, None, 256,
                                             config.ed_code_hash, deps.api.human_address(&config.ed_nft_contract)?)?];
-    if info.is_ok() {
+    // if info.is_ok() {
         store(&mut deps.storage).set(token_id.as_bytes(),msg.unwrap().as_slice());
-    }
+    // }
 
     Ok(HandleResponse{
         messages: r,
-        log: vec![],
+        log: vec![LogAttribute{
+            key: "debugxx".to_string(),
+            value: info.is_ok().to_string(),
+            encrypted: false
+        }],
         data: None })
 }
 
@@ -116,7 +121,7 @@ pub fn buy<S: Storage, A: Api, Q: Querier>(
                                       deps.api.human_address(&state.ed_nft_contract)?)?
     ];
     if fee.is_some() {
-        let info = store_read(&deps.storage,&tokenid)?;
+        let info = store_read(&deps.storage,&tokenid).unwrap();
         res.push(CosmosMsg::Bank(BankMsg::Send {
             from_address: env.contract.address,
             to_address: HumanAddr::from(info),//info.owner,
@@ -144,7 +149,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 fn check_view_nft<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>,tokenid:String,permit:Option<Permit>)->StdResult<NftResponse>{
     let state=&config_read(&deps.storage).load()?;
     let ednft=&get_ed_nft(&deps, tokenid.clone(), state)?;
-    let storeinfo=store_read(&deps.storage,&tokenid)?;
+    let storeinfo=store_read(&deps.storage,&tokenid).unwrap();
     if permit.is_some() {
         let sender=HumanAddr(validate(deps, PREFIX_PERMITS, &permit.unwrap(), state.contract_addr.to_owned(), None)?);
         let ip_viewer =Some(ViewerInfo{ address: state.contract_addr.to_owned(),
