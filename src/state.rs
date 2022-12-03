@@ -39,7 +39,7 @@ pub fn store<S: Storage>(storage: &mut S) -> PrefixedStorage<S> {
     PrefixedStorage::new(STORE_KEY, storage)
 }
 
-pub fn store_read<S: Storage>(storage: &S,tokenid:&String) -> StdResult<StoreNftInfo> {
+pub fn store_read<S: Storage>(storage: &S,tokenid:&String) -> StdResult<String> {
     let d=ReadonlyPrefixedStorage::new(STORE_KEY, storage).get(tokenid.as_bytes()).unwrap_or_default();
     let r=from_binary(&Binary::from(d))?;
     r

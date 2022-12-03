@@ -119,7 +119,7 @@ pub fn buy<S: Storage, A: Api, Q: Querier>(
         let info = store_read(&deps.storage,&tokenid)?;
         res.push(CosmosMsg::Bank(BankMsg::Send {
             from_address: env.contract.address,
-            to_address: info.owner,
+            to_address: HumanAddr::from(info),//info.owner,
             amount: env.message.sent_funds
         }));
     }
