@@ -1,14 +1,13 @@
 
 use std::ops::Add;
 use std::vec::IntoIter;
-use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, HumanAddr, CosmosMsg, Coin, Uint128, BankMsg, from_binary, ReadonlyStorage, LogAttribute};
+use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, HumanAddr, CosmosMsg, Coin, Uint128, BankMsg, from_binary, LogAttribute};
 use secret_toolkit::permit::{Permit, validate};
-use secret_toolkit::serialization::{Json, Serde};
 use secret_toolkit::snip721::{AccessLevel, Metadata, nft_dossier_query, NftDossier, register_receive_nft_msg, set_viewing_key_msg, set_whitelisted_approval_msg, tokens_query, Trait, transfer_nft_msg, ViewerInfo};
 use snafu::{Backtrace, GenerateBacktrace};
 
 use crate::msg::{ConfigResponse, HandleMsg, InitMsg, NftResponse, QueryMsg};
-use crate::state::{config, config_read, PREFIX_PERMITS, State, store, store_read, StoreNftInfo, SUFFIX_ED_KEY, SUFFIX_IP_KEY};
+use crate::state::{config, config_read, PREFIX_PERMITS, State, store_read, store_remove, store_set, StoreNftInfo, SUFFIX_ED_KEY, SUFFIX_IP_KEY};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -46,20 +45,20 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     match msg {
         HandleMsg::ReceiveNft { sender,token_id,msg } =>
-            set_sender_auth(deps, sender, token_id, msg),
+            set_sender_auth(deps, sender, &token_id, msg),
         HandleMsg::Reset { view_key } => set_up(deps, env,view_key),
-        HandleMsg::Transfer {token_id,receipient}=>buy(deps,env,token_id,receipient)
+        HandleMsg::Transfer {token_id,receipient}=>buy(deps,env,&token_id,receipient)
     }
 }
 
 pub fn set_sender_auth<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     sender: HumanAddr,
-    token_id: String,
+    token_id: &String,
     msg: Option<Binary>, )->StdResult<HandleResponse>{
     let config=config_read(&deps.storage).load()?;
 
-    let info : StdResult<StoreNftInfo> = Json::deserialize(&msg.clone().unwrap_or_default().as_slice());
+    let info : StdResult<StoreNftInfo> = StoreNftInfo::from(msg.clone().unwrap_or_default());
     let r=vec![set_whitelisted_approval_msg(sender, Option::from(token_id.clone()),
                                             Option::from(AccessLevel::ApproveToken),
                                             Option::from(AccessLevel::ApproveToken), None, None, None, 256,
@@ -67,7 +66,7 @@ pub fn set_sender_auth<S: Storage, A: Api, Q: Querier>(
 
     let valid_msg=info.is_ok();
     if valid_msg {
-        store(&mut deps.storage).set(token_id.as_bytes(),&Json::serialize(&info.unwrap())?);
+        store_set(&mut deps.storage,token_id,&info.unwrap())?;
     }
 
     Ok(HandleResponse{
@@ -114,7 +113,7 @@ pub fn set_up<S: Storage, A: Api, Q: Querier>(
 pub fn buy<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    tokenid:String,
+    tokenid:&String,
     receipient:Option<HumanAddr>
 ) -> StdResult<HandleResponse> {
     let state=config_read(&deps.storage).load()?;
@@ -130,14 +129,14 @@ pub fn buy<S: Storage, A: Api, Q: Querier>(
                                       deps.api.human_address(&state.ed_nft_contract)?)?
     ];
     if fee.is_some() {
-        let info = store_read(&deps.storage,&tokenid).unwrap();
+        let info = store_read(&deps.storage,tokenid).unwrap();
         res.push(CosmosMsg::Bank(BankMsg::Send {
             from_address: env.contract.address,
             to_address: info.owner,
             amount: env.message.sent_funds
         }));
     }
-    store(&mut deps.storage).remove(tokenid.as_bytes());
+    store_remove(&mut deps.storage,tokenid);
     Ok(HandleResponse{
         messages: res,
         log: vec![],
@@ -150,15 +149,15 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
-        QueryMsg::ViewNft {token_id,permit}=>to_binary(&check_view_nft(deps,token_id,permit)?),
+        QueryMsg::ViewNft {token_id,permit}=>to_binary(&check_view_nft(deps,&token_id,permit)?),
         QueryMsg::GetConfig {permit} => to_binary(&query_config(deps,permit)?),
     }
 }
 
-fn check_view_nft<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>,tokenid:String,permit:Option<Permit>)->StdResult<NftResponse>{
+fn check_view_nft<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>,tokenid:&String,permit:Option<Permit>)->StdResult<NftResponse>{
     let state=&config_read(&deps.storage).load()?;
     let ednft=&get_ed_nft(&deps, tokenid.clone(), state)?;
-    let storeinfo=store_read(&deps.storage,&tokenid).unwrap();
+    let storeinfo=store_read(&deps.storage,tokenid)?;
     if permit.is_some() {
         let sender=HumanAddr(validate(deps, PREFIX_PERMITS, &permit.unwrap(), state.contract_addr.to_owned(), None)?);
         let ip_viewer =Some(ViewerInfo{ address: state.contract_addr.to_owned(),
@@ -236,9 +235,10 @@ fn get_ed_nft<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>,tokenid:Str
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env};
-    use cosmwasm_std::{coins, from_binary, StdError};
+    use cosmwasm_std::{coins, from_binary};
     use schemars::_serde_json::{json, Value};
-    use secret_toolkit::permit::{PermitParams, PermitSignature, PubKey, SignedPermit, TokenPermissions};
+    use secret_toolkit::permit::{PermitParams, PermitSignature, PubKey, TokenPermissions};
+    use secret_toolkit::serialization::{Json, Serde};
 
     static ipCAddr: &str ="secret";
     static ipCHash: &str ="7be15101bd6dc6c991213f6b108c8626a1feb63312f8622cbe3e2243305a27bd";
@@ -272,7 +272,7 @@ mod tests {
 
     #[test]
     fn json_test(){
-        let t=r#"{"owner":"secret19kl6c3lml882eyzagf6z0sh7pvsj8tndcfus3k","price":1000}"#;
+        let t=r#"{owner:"secret19kl6c3lml882eyzagf6z0sh7pvsj8tndcfus3k",price:1000}"#;
         let j1:StdResult<StoreNftInfo>=Json::deserialize(t.as_bytes());
         let j2=json!(t);
         println!("{}",j1.is_ok());
@@ -280,6 +280,11 @@ mod tests {
         println!("{}",j2.is_string());
         let v=j2.get("owner");
         println!("{}",v.unwrap_or(&Value::String("".parse().unwrap())));
+
+        let t1="1000 secret19kl6c3lml882eyzagf6z0sh7pvsj8tndcfus3k  other info";
+        let j3=StoreNftInfo::from(Binary::from(t1.as_bytes())).unwrap();
+        println!("{}",j3.price);
+        println!("{}",j3.owner);
     }
     #[test]
     fn view() {
