@@ -268,6 +268,7 @@ mod tests {
         println!("{}", value.ip_nft_contract);
         assert_eq!(HumanAddr(String::from("creator")), value.owner);
         assert_eq!(ipCHash, value.ed_code_hash);
+
     }
 
     #[test]
@@ -285,6 +286,12 @@ mod tests {
         let j3=StoreNftInfo::from(Binary::from(t1.as_bytes())).unwrap();
         println!("{}",j3.price);
         println!("{}",j3.owner);
+
+        // let deps = mock_dependencies(20, &[]);
+        // let r=store_set(deps.storage, &String::from("1"), &j3);
+
+        //test error
+        // assert_eq!(r.unwrap_err(), StdError::serialize_err("secret_contract_example::state::StoreNftInfo ","u128 is not supported"));
     }
     #[test]
     fn view() {
