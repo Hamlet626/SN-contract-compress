@@ -58,16 +58,16 @@ pub fn set_sender_auth<S: Storage, A: Api, Q: Querier>(
     msg: Option<Binary>, )->StdResult<HandleResponse>{
     let config=config_read(&deps.storage).load()?;
 
-    let info : StdResult<StoreNftInfo> = StoreNftInfo::from(msg.clone().unwrap_or_default());
+    let info = StoreNftInfo::from(msg.clone().unwrap_or_default())?;
     let r=vec![set_whitelisted_approval_msg(sender, Option::from(token_id.clone()),
                                             Option::from(AccessLevel::ApproveToken),
                                             Option::from(AccessLevel::ApproveToken), None, None, None, 256,
                                             config.ed_code_hash, deps.api.human_address(&config.ed_nft_contract)?)?];
 
-    let valid_msg=info.is_ok();
-    if valid_msg {
-        store_set(&mut deps.storage,token_id,&info.unwrap())?;
-    }
+    // let valid_msg=info.is_ok();
+    // if valid_msg {
+        store_set(&mut deps.storage,token_id,&info)?;
+    // }
 
     Ok(HandleResponse{
         messages: r,
@@ -76,10 +76,10 @@ pub fn set_sender_auth<S: Storage, A: Api, Q: Querier>(
             key: "debugxx".to_string(),
             value: String::from_utf8(msg.clone().unwrap_or_default().into()).unwrap_or("wrong".parse().unwrap()),
             encrypted: false
-        },LogAttribute{
-                key: "debug".to_string(),
-                value: valid_msg.to_string(),
-                encrypted: false
+        // },LogAttribute{
+        //         key: "debug".to_string(),
+        //         value: valid_msg.to_string(),
+        //         encrypted: false
             },
         ],
         data: None })
