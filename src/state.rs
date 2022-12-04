@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use cosmwasm_std::{Binary, CanonicalAddr, HumanAddr, ReadonlyStorage, StdError, StdResult, Storage};
 
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton, PrefixedStorage, ReadonlyPrefixedStorage};
-use secret_toolkit::serialization::{Bincode2, Json, Serde};
+use secret_toolkit::serialization::{Json, Serde};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static STORE_KEY: &[u8] = b"store";
@@ -26,7 +26,8 @@ pub struct State {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct StoreNftInfo {
     pub owner: HumanAddr,
-    pub price: u128,
+    ///using u64 for Json::serde in here and NftResponse
+    pub price: u64,
 }
 
 impl StoreNftInfo {
@@ -36,7 +37,7 @@ impl StoreNftInfo {
         let msg=String::from_utf8(msg_bytes.into())
             .or_else(|_e|Err(StdError::serialize_err("StoreNftInfo","invalid binary")))?;
         let mut r =msg.split_whitespace();
-        let price=r.next().ok_or_else(||StdError::serialize_err("StoreNftInfo","no price provided"))?.parse::<u128>()
+        let price=r.next().ok_or_else(||StdError::serialize_err("StoreNftInfo","no price provided"))?.parse::<u64>()
             .or_else(|_e|Err(StdError::serialize_err("StoreNftInfo","invalid price")))?;
         Ok(StoreNftInfo{
             owner: HumanAddr::from(r.next().ok_or_else(||StdError::serialize_err("StoreNftInfo","no owner provided"))?),
@@ -54,7 +55,7 @@ pub fn config_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, State> {
 }
 
 pub fn store_set<S: Storage>(storage: &mut S, token_id:&String, info: &StoreNftInfo) -> StdResult<()> {
-    PrefixedStorage::new(STORE_KEY, storage).set(token_id.as_bytes(),&Bincode2::serialize(info)?);
+    PrefixedStorage::new(STORE_KEY, storage).set(token_id.as_bytes(),&Json::serialize(info)?);
     Ok(())
 }
 pub fn store_remove<S: Storage>(storage: &mut S,token_id:&String){
@@ -62,7 +63,7 @@ pub fn store_remove<S: Storage>(storage: &mut S,token_id:&String){
 }
 
 pub fn store_read<S: Storage>(storage: &S,tokenid:&String) -> StdResult<StoreNftInfo> {
-    Bincode2::deserialize(
+    Json::deserialize(
         &ReadonlyPrefixedStorage::new(STORE_KEY, storage)
             .get(tokenid.as_bytes())
             .ok_or_else(|| StdError::not_found(tokenid))?,
